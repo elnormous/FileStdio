@@ -104,7 +104,7 @@ namespace filestdio
             File(const std::string& filename, Mode mode)
             {
                 const int flags = (mode == Mode::read) ? O_RDONLY :
-                    (mode == Mode::write) ? O_WRONLY : -1;
+                    (mode == Mode::write) ? (O_CREAT | O_WRONLY) : -1;
                 fileDescriptor = open(filename.c_str(), flags);
                 while (fileDescriptor == -1 && errno == EINTR)
                     fileDescriptor = open(filename.c_str(), flags);
