@@ -21,8 +21,8 @@ namespace filestdio
     class Redirect final
     {
     public:
-        Redirect(const std::string& filename, Stream stream):
-            originalFile(stream)
+        Redirect(const std::string& filename, Stream s):
+            originalFile(s), stream(s)
         {
             const File::Mode mode = (stream == Stream::in) ? File::Mode::read :
                 (stream == Stream::out || stream == Stream::err) ? File::Mode::write :
@@ -30,7 +30,7 @@ namespace filestdio
             File file(filename, mode);
 #if defined(_WIN32)
 #else
-            int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
+            const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
                 (stream == Stream::out) ? STDOUT_FILENO :
                 (stream == Stream::err) ? STDERR_FILENO :
                 -1;
@@ -43,6 +43,21 @@ namespace filestdio
                 throw std::system_error(errno, std::system_category(), "Failed to duplicate file descriptor");
 #endif
         }
+
+        ~Redirect()
+        {
+#if defined(_WIN32)
+#else
+            const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
+                (stream == Stream::out) ? STDOUT_FILENO :
+                (stream == Stream::err) ? STDERR_FILENO :
+                -1;
+            dup2(originalFile, streamFileDescriptor);
+#endif
+        }
+
+        Redirect(const Redirect&) = delete;
+        Redirect& operator=(const Redirect&) = delete;
 
     private:
         class StdFile final
@@ -72,11 +87,7 @@ namespace filestdio
             {
 #if defined(_WIN32)
 #else
-                if (fileDescriptor != -1)
-                {
-                    dup2(fileDescriptor, streamFileDescriptor);
-                    close(fileDescriptor);
-                }
+                if (fileDescriptor != -1) close(fileDescriptor);
 #endif
             }
 
@@ -137,6 +148,7 @@ namespace filestdio
         };
 
         StdFile originalFile;
+        Stream stream;
     };
 }
 
