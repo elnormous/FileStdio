@@ -83,6 +83,10 @@ namespace filestdio
             StdFile(const StdFile&) = delete;
             StdFile& operator=(const StdFile&) = delete;
 
+#if defined(_WIN32)
+#else
+            operator int() const noexcept { return fileDescriptor; }
+#endif
         private:
 #if defined(_WIN32)
 #else
@@ -121,7 +125,10 @@ namespace filestdio
             File(const File&) = delete;
             File& operator=(const File&) = delete;
 
+#if defined(_WIN32)
+#else
             operator int() const noexcept { return fileDescriptor; }
+#endif
         private:
 #if defined(_WIN32)
 #else
