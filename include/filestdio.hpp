@@ -33,13 +33,14 @@ namespace filestdio
     {
     public:
         Redirect(const std::string& filename, Stream s):
-            originalFile(s), stream(s)
+            originalFile(s), stream(s),
+            file(filename, (stream == Stream::in) ? File::Mode::read :
+                 (stream == Stream::out || stream == Stream::err) ? File::Mode::write :
+                 File::Mode::none)
         {
-            const File::Mode mode = (stream == Stream::in) ? File::Mode::read :
-                (stream == Stream::out || stream == Stream::err) ? File::Mode::write :
-                File::Mode::none;
-            File file(filename, mode);
 #if defined(_WIN32)
+            if (!SetStdHandle(file))
+                throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
 #else
             const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
                 (stream == Stream::out) ? STDOUT_FILENO :
@@ -58,6 +59,8 @@ namespace filestdio
         ~Redirect()
         {
 #if defined(_WIN32)
+             if (!SetStdHandle(originalFile))
+                 throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
 #else
             const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
                 (stream == Stream::out) ? STDOUT_FILENO :
@@ -190,6 +193,7 @@ namespace filestdio
 
         StdFile originalFile;
         Stream stream;
+        File file;
     };
 }
 
