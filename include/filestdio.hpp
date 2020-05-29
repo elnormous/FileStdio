@@ -157,7 +157,7 @@ namespace filestdio
 #else
                 const int flags = (mode == Mode::read) ? O_RDONLY :
                     (mode == Mode::write) ? (O_CREAT | O_WRONLY) : -1;
-                fileDescriptor = open(filename.c_str(), flags);
+                fileDescriptor = open(filename.c_str(), flags, S_IRUSR | S_IWUSR);
                 while (fileDescriptor == -1 && errno == EINTR)
                     fileDescriptor = open(filename.c_str(), flags);
 
