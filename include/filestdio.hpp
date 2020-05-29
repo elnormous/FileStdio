@@ -4,6 +4,17 @@
 #include <string>
 #include <system_error>
 #if defined(_WIN32)
+#  pragma push_macro("WIN32_LEAN_AND_MEAN")
+#  pragma push_macro("NOMINMAX")
+#  ifndef WIN32_LEAN_AND_MEAN
+#    define WIN32_LEAN_AND_MEAN
+#  endif
+#  ifndef NOMINMAX
+#    define NOMINMAX
+#  endif
+#  include <Windows.h>
+#  pragma pop_macro("WIN32_LEAN_AND_MEAN")
+#  pragma pop_macro("NOMINMAX")
 #else
 #  include <fcntl.h>
 #  include <unistd.h>
@@ -63,25 +74,33 @@ namespace filestdio
         class StdFile final
         {
         public:
-#if defined(_WIN32)
-            StdFile(Stream stream)
-            {
-            }
-#else
             StdFile(Stream stream):
-                streamFileDescriptor((stream == Stream::in) ? STDIN_FILENO :
-                                     (stream == Stream::out) ? STDOUT_FILENO :
-                                     (stream == Stream::err) ? STDERR_FILENO :
-                                     -1)
+#if defined(_WIN32)
+                handle(GetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
+                                    (stream == Stream::out) ? STD_OUTPUT_HANDLE :
+                                    (stream == Stream::err) ? STD_ERROR_HANDLE :
+                                    INVALID_HANDLE_VALUE))
+#else
+                fileDescriptor(dup((stream == Stream::in) ? STDIN_FILENO :
+                                   (stream == Stream::out) ? STDOUT_FILENO :
+                                   (stream == Stream::err) ? STDERR_FILENO :
+                                   -1))
+#endif
             {
-                fileDescriptor = dup(streamFileDescriptor);
+#if defined(_WIN32)
+                if (handle == INVALID_HANDLE_VALUE)
+                    throw std::system_error(GetLastError(), std::system_category(), "Failed to get standard device handle");
+#else
                 while (fileDescriptor == -1 && errno == EINTR)
-                    fileDescriptor = dup(streamFileDescriptor);
+                    fileDescriptor = dup((stream == Stream::in) ? STDIN_FILENO :
+                                         (stream == Stream::out) ? STDOUT_FILENO :
+                                         (stream == Stream::err) ? STDERR_FILENO :
+                                         -1);
 
                 if (fileDescriptor == -1)
                     throw std::system_error(errno, std::system_category(), "Failed to duplicate file descriptor");
-            }
 #endif
+            }
 
             ~StdFile()
             {
@@ -95,13 +114,14 @@ namespace filestdio
             StdFile& operator=(const StdFile&) = delete;
 
 #if defined(_WIN32)
+            operator HANDLE() const noexcept { return handle; }
 #else
             operator int() const noexcept { return fileDescriptor; }
 #endif
         private:
 #if defined(_WIN32)
+            HANDLE handle = INVALID_HANDLE_VALUE;
 #else
-            int streamFileDescriptor = -1;
             int fileDescriptor = -1;
 #endif
         };
