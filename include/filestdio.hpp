@@ -138,6 +138,20 @@ namespace filestdio
 
             File(const std::string& filename, Mode mode)
             {
+#if defined(_WIN32)
+                DWORD access = (mode == Mode::read) ? GENERIC_READ :
+                    (mode == Mode::write) ? GENERIC_WRITE : -1;
+
+                DWORD creationDisposition = (mode == Mode::read) ? OPEN_EXISTING :
+                    (mode == Mode::write) ? OPEN_ALWAYS : -1;
+
+                handle = CreateFileA(filename.c_str(), access, 0,
+                                     nullptr, creationDisposition,
+                                     FILE_ATTRIBUTE_NORMAL, nullptr);
+
+                if (handle == INVALID_HANDLE_VALUE)
+                    throw std::system_error(GetLastError(), std::system_category(), "Failed to open file");
+#else
                 const int flags = (mode == Mode::read) ? O_RDONLY :
                     (mode == Mode::write) ? (O_CREAT | O_WRONLY) : -1;
                 fileDescriptor = open(filename.c_str(), flags);
@@ -146,22 +160,29 @@ namespace filestdio
 
                 if (fileDescriptor == -1)
                     throw std::system_error(errno, std::system_category(), "Failed to open file");
+#endif
             }
 
             ~File()
             {
+#if defined(_WIN32)
+                if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
+#else
                 if (fileDescriptor != -1) close(fileDescriptor);
+#endif
             }
 
             File(const File&) = delete;
             File& operator=(const File&) = delete;
 
 #if defined(_WIN32)
+            operator HANDLE() const noexcept { return handle; }
 #else
             operator int() const noexcept { return fileDescriptor; }
 #endif
         private:
 #if defined(_WIN32)
+            HANDLE handle = INVALID_HANDLE_VALUE;
 #else
             int fileDescriptor = -1;
 #endif
