@@ -39,7 +39,10 @@ namespace filestdio
                  File::Mode::none)
         {
 #if defined(_WIN32)
-            if (!SetStdHandle(file))
+            if (!SetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
+                              (stream == Stream::out) ? STD_OUTPUT_HANDLE :
+                              (stream == Stream::err) ? STD_ERROR_HANDLE :
+                              -1, file))
                 throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
 #else
             const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
@@ -59,7 +62,10 @@ namespace filestdio
         ~Redirect()
         {
 #if defined(_WIN32)
-             if (!SetStdHandle(originalFile))
+             if (!SetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
+                               (stream == Stream::out) ? STD_OUTPUT_HANDLE :
+                               (stream == Stream::err) ? STD_ERROR_HANDLE :
+                               -1, originalFile))
                  throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
 #else
             const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
@@ -82,7 +88,7 @@ namespace filestdio
                 handle(GetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
                                     (stream == Stream::out) ? STD_OUTPUT_HANDLE :
                                     (stream == Stream::err) ? STD_ERROR_HANDLE :
-                                    INVALID_HANDLE_VALUE))
+                                    -1))
 #else
                 fileDescriptor(dup((stream == Stream::in) ? STDIN_FILENO :
                                    (stream == Stream::out) ? STDOUT_FILENO :
