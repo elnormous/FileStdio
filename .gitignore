@@ -2,3 +2,6 @@ test/test.xcodeproj/project.xcworkspace/xcshareddata
 test/test.xcodeproj/project.xcworkspace/xcuserdata
 test/test.xcodeproj/xcshareddata
 test/test.xcodeproj/xcuserdata
+test/Win32
+test/x64
+*.user
