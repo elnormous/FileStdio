@@ -111,8 +111,7 @@ namespace filestdio
             {
 #if defined(_WIN32)
 #else
-                if (fileDescriptor != -1)
-                    while (close(fileDescriptor) == -1 && errno == EINTR);
+                if (fileDescriptor != -1) close(fileDescriptor);
 #endif
             }
 
@@ -174,8 +173,7 @@ namespace filestdio
 #if defined(_WIN32)
                 if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
 #else
-                if (fileDescriptor != -1)
-                    while (close(fileDescriptor) == -1 && errno == EINTR);
+                if (fileDescriptor != -1) close(fileDescriptor);
 #endif
             }
 
