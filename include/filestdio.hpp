@@ -39,17 +39,10 @@ namespace filestdio
                  File::Mode::none)
         {
 #if defined(_WIN32)
-            if (!SetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
-                              (stream == Stream::out) ? STD_OUTPUT_HANDLE :
-                              (stream == Stream::err) ? STD_ERROR_HANDLE :
-                              -1, file))
+            if (!SetStdHandle(getStdHandle(stream), file))
                 throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
 #else
-            const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
-                (stream == Stream::out) ? STDOUT_FILENO :
-                (stream == Stream::err) ? STDERR_FILENO :
-                -1;
-
+            const int streamFileDescriptor = getStreamFileDescriptor(stream);
             int result = dup2(file, streamFileDescriptor);
             while (result == -1 && errno == EINTR)
                 result = dup2(file, streamFileDescriptor);
@@ -62,16 +55,10 @@ namespace filestdio
         ~Redirect()
         {
 #if defined(_WIN32)
-             if (!SetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
-                               (stream == Stream::out) ? STD_OUTPUT_HANDLE :
-                               (stream == Stream::err) ? STD_ERROR_HANDLE :
-                               -1, originalFile))
+             if (!SetStdHandle(getStdHandle(stream), originalFile))
                  throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
 #else
-            const int streamFileDescriptor = (stream == Stream::in) ? STDIN_FILENO :
-                (stream == Stream::out) ? STDOUT_FILENO :
-                (stream == Stream::err) ? STDERR_FILENO :
-                -1;
+            const int streamFileDescriptor = getStreamFileDescriptor(stream);
             while (dup2(originalFile, streamFileDescriptor) == -1 && errno == EINTR);
 #endif
         }
@@ -80,20 +67,32 @@ namespace filestdio
         Redirect& operator=(const Redirect&) = delete;
 
     private:
+#if defined(_WIN32)
+        static constexpr DWORD getStdHandle(Stream stream) noexcept
+        {
+            return (stream == Stream::in) ? STD_INPUT_HANDLE :
+                (stream == Stream::out) ? STD_OUTPUT_HANDLE :
+                (stream == Stream::err) ? STD_ERROR_HANDLE :
+                -1;
+        }
+#else
+        static constexpr int getStreamFileDescriptor(Stream stream) noexcept
+        {
+            return (stream == Stream::in) ? STDIN_FILENO :
+                (stream == Stream::out) ? STDOUT_FILENO :
+                (stream == Stream::err) ? STDERR_FILENO :
+                -1;
+        }
+#endif
+
         class StdFile final
         {
         public:
             StdFile(Stream stream):
 #if defined(_WIN32)
-                handle(GetStdHandle((stream == Stream::in) ? STD_INPUT_HANDLE :
-                                    (stream == Stream::out) ? STD_OUTPUT_HANDLE :
-                                    (stream == Stream::err) ? STD_ERROR_HANDLE :
-                                    -1))
+                handle(GetStdHandle(getStdHandle(stream))
 #else
-                fileDescriptor(dup((stream == Stream::in) ? STDIN_FILENO :
-                                   (stream == Stream::out) ? STDOUT_FILENO :
-                                   (stream == Stream::err) ? STDERR_FILENO :
-                                   -1))
+                fileDescriptor(dup(getStreamFileDescriptor(stream)))
 #endif
             {
 #if defined(_WIN32)
@@ -101,10 +100,7 @@ namespace filestdio
                     throw std::system_error(GetLastError(), std::system_category(), "Failed to get standard device handle");
 #else
                 while (fileDescriptor == -1 && errno == EINTR)
-                    fileDescriptor = dup((stream == Stream::in) ? STDIN_FILENO :
-                                         (stream == Stream::out) ? STDOUT_FILENO :
-                                         (stream == Stream::err) ? STDERR_FILENO :
-                                         -1);
+                    fileDescriptor = dup(getStreamFileDescriptor(stream));
 
                 if (fileDescriptor == -1)
                     throw std::system_error(errno, std::system_category(), "Failed to duplicate file descriptor");
