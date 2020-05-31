@@ -72,7 +72,7 @@ namespace filestdio
                 (stream == Stream::out) ? STDOUT_FILENO :
                 (stream == Stream::err) ? STDERR_FILENO :
                 -1;
-            dup2(originalFile, streamFileDescriptor);
+            while (dup2(originalFile, streamFileDescriptor) == -1 && errno == EINTR);
 #endif
         }
 
@@ -115,7 +115,8 @@ namespace filestdio
             {
 #if defined(_WIN32)
 #else
-                if (fileDescriptor != -1) close(fileDescriptor);
+                if (fileDescriptor != -1)
+                    while (close(fileDescriptor) == -1 && errno == EINTR);
 #endif
             }
 
@@ -177,7 +178,8 @@ namespace filestdio
 #if defined(_WIN32)
                 if (handle != INVALID_HANDLE_VALUE) CloseHandle(handle);
 #else
-                if (fileDescriptor != -1) close(fileDescriptor);
+                if (fileDescriptor != -1)
+                    while (close(fileDescriptor) == -1 && errno == EINTR);
 #endif
             }
 
