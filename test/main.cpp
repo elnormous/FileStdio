@@ -12,6 +12,8 @@ int main(int argc, const char * argv[])
             std::cout << "test";
         }
 
+        std::cout << "test2" << std::endl;
+
         filestdio::Redirect in("test.txt", filestdio::Stream::in);
 
         std::string s;
