@@ -55,8 +55,7 @@ namespace filestdio
         ~Redirect()
         {
 #if defined(_WIN32)
-             if (!SetStdHandle(getStdHandle(stream), originalFile))
-                 throw std::system_error(GetLastError(), std::system_category(), "Failed to set std handle");
+            SetStdHandle(getStdHandle(stream), originalFile);
 #else
             const int streamFileDescriptor = getStreamFileDescriptor(stream);
             while (dup2(originalFile, streamFileDescriptor) == -1 && errno == EINTR);
@@ -90,7 +89,7 @@ namespace filestdio
         public:
             StdFile(Stream stream):
 #if defined(_WIN32)
-                handle(GetStdHandle(getStdHandle(stream))
+                handle(GetStdHandle(getStdHandle(stream)))
 #else
                 fileDescriptor(dup(getStreamFileDescriptor(stream)))
 #endif
